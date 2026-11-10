@@ -26,7 +26,7 @@ app.MapGet("/api/workspaces/{workspaceId}/documents", (
 {
     if (!store.IsAuthorized(workspaceId, context.Request.Headers["X-Workspace-Token"]))
         return Results.Unauthorized();
-    return Results.Ok(store.GetDocuments(workspaceId));
+    return Results.Ok(store.GetDocuments(workspaceId).Select(DocumentResponse.From));
 });
 
 app.MapPost("/api/workspaces/{workspaceId}/documents", async (
@@ -58,7 +58,7 @@ app.MapPost("/api/workspaces/{workspaceId}/documents", async (
         return Results.BadRequest(new { error = "The document cannot be empty." });
 
     var document = store.AddDocument(workspaceId, Path.GetFileName(file.FileName), content);
-    return Results.Created($"/api/workspaces/{workspaceId}/documents", document);
+    return Results.Created($"/api/workspaces/{workspaceId}/documents", DocumentResponse.From(document));
 });
 
 app.MapPost("/api/workspaces/{workspaceId}/ask", (
@@ -79,3 +79,12 @@ app.MapPost("/api/workspaces/{workspaceId}/ask", (
 app.Run();
 
 public sealed record AskRequest(string Question);
+public sealed record DocumentResponse(Guid Id, string FileName, DateTimeOffset UploadedAt)
+{
+    public static DocumentResponse From(DocumentRecord document) =>
+        new(document.Id, document.FileName, document.UploadedAt);
+}
+
+public partial class Program
+{
+}

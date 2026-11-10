@@ -5,6 +5,11 @@ public sealed record AnswerResponse(string Answer, IReadOnlyCollection<Citation>
 
 public sealed class RetrievalService
 {
+    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "the", "and", "are", "for", "how", "what", "when", "where", "does", "can", "with"
+    };
+
     public AnswerResponse Answer(
         string workspaceId,
         string question,
@@ -12,7 +17,7 @@ public sealed class RetrievalService
     {
         var terms = question.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(term => term.Trim('.', ',', '?', '!', ':', ';').ToLowerInvariant())
-            .Where(term => term.Length >= 3)
+            .Where(term => term.Length >= 3 && !StopWords.Contains(term))
             .Distinct()
             .ToArray();
 
@@ -50,4 +55,3 @@ public sealed class RetrievalService
         return (sentence ?? content).Trim()[..Math.Min(240, (sentence ?? content).Trim().Length)];
     }
 }
-
