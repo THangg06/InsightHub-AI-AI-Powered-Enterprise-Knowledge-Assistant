@@ -1,0 +1,30 @@
+# Build output
+**/bin/
+**/obj/
+dist/
+coverage/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.user
+*.suo
+
+# IDE and OS files
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node dependencies
+node_modules/
+
+# Test and local data
+TestResults/
+*.db
+*.sqlite
+
