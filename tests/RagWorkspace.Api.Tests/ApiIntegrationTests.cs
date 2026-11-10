@@ -61,6 +61,25 @@ public sealed class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Lists_and_deletes_a_chat_session_for_the_authenticated_user()
+    {
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"{suffix}@example.test";
+        var register = await client.PostAsJsonAsync("/api/auth/register", new { email, password = "Password123" });
+        var auth = await register.Content.ReadFromJsonAsync<AuthPayload>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.Token);
+        var workspaceResponse = await client.PostAsJsonAsync("/api/workspaces", new { name = $"Workspace {suffix}" });
+        var workspace = await workspaceResponse.Content.ReadFromJsonAsync<WorkspacePayload>();
+
+        var chatsResponse = await client.GetAsync($"/api/workspaces/{workspace!.Id}/chats");
+        Assert.Equal(HttpStatusCode.OK, chatsResponse.StatusCode);
+        var chats = await chatsResponse.Content.ReadFromJsonAsync<ChatPayload[]>();
+        Assert.NotNull(chats);
+        Assert.Empty(chats!);
+    }
+
     private sealed record AuthPayload(string Token, Guid UserId, string Email);
     private sealed record WorkspacePayload(Guid Id, string Name);
+    private sealed record ChatPayload(Guid Id, string Title, DateTimeOffset CreatedAt);
 }
