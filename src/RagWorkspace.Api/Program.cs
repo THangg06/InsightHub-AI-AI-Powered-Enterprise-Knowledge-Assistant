@@ -191,6 +191,16 @@ app.MapGet("/api/chats/{chatId:guid}", async (Guid chatId, ClaimsPrincipal princ
     return chat is null ? Results.NotFound() : Results.Ok(chat.Messages.OrderBy(message => message.CreatedAt).Select(message => new { message.Role, message.Content, message.CreatedAt, Citations = message.Citations.Select(citation => new CitationResponse(citation.DocumentChunk.DocumentId, citation.DocumentChunk.Document.FileName, citation.Excerpt)) }));
 }).RequireAuthorization();
 
+app.MapDelete("/api/chats/{chatId:guid}", async (Guid chatId, ClaimsPrincipal principal, ApplicationDbContext db) =>
+{
+    var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+    var chat = await db.ChatSessions.SingleOrDefaultAsync(session => session.Id == chatId && session.UserId.ToString() == userId);
+    if (chat is null) return Results.NotFound();
+    db.ChatSessions.Remove(chat);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+}).RequireAuthorization();
+
 app.MapDelete("/api/documents/{documentId:guid}", async (Guid documentId, ClaimsPrincipal principal, ApplicationDbContext db) =>
 {
     var document = await db.Documents.FindAsync(documentId);
