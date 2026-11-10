@@ -27,5 +27,14 @@ public sealed class RetrievalServiceTests
         Assert.Empty(result.Citations);
         Assert.Contains("could not find", result.Answer, StringComparison.OrdinalIgnoreCase);
     }
-}
 
+    [Fact]
+    public void Authorizes_only_the_matching_workspace_token()
+    {
+        var store = new WorkspaceStore();
+
+        Assert.True(store.IsAuthorized("workspace", "workspace"));
+        Assert.False(store.IsAuthorized("workspace", "other-workspace"));
+        Assert.False(store.IsAuthorized("workspace", null));
+    }
+}
