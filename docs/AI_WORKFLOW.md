@@ -14,13 +14,12 @@ AI assistance is used as a reviewable tool, not as an authority. Every suggestio
 ## Code generation and architecture
 
 - **Original task:** build a minimal document upload and cited-question vertical slice.
-- **Prompt used:** “Create a provider-free ASP.NET Core API and React client with workspace authorization and deterministic retrieval.”
-- **Suggestion:** use in-memory storage and keyword overlap for a deterministic demo.
-- **Review and modification:** added size and empty-file validation, explicit unauthorized responses, and a no-result response.
+- **Prompt used:** “Create a local-first ASP.NET Core API and React client with JWT, workspace authorization, document extraction, chunking, embeddings, and citations.”
+- **Suggestion:** use deterministic embeddings locally and isolate the hosted LLM behind an adapter.
+- **Review and modification:** added size and empty-file validation, JWT membership checks, PostgreSQL/pgvector mapping, persisted citations, and a no-result response.
 - **Verification:** backend tests cover citations and irrelevant questions; CI contains build and test commands.
 - **Final result:** a runnable baseline that does not pretend to have a hosted LLM.
 
 ## Code review, tests, debugging, refactoring, and documentation
 
 For each change, AI-generated code is reviewed for input validation, authorization boundaries, null handling, and maintainability. Tests are generated from observable behavior, then adjusted to assert the actual API contract. Debugging follows reproduction, a focused fix, and a regression test. Refactoring is only accepted when behavior remains covered. Documentation is written after implementation so it describes verified behavior rather than aspirations.
-

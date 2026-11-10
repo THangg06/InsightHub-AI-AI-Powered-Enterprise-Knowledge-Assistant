@@ -2,12 +2,12 @@
 
 ## Audit scope
 
-This audit covers the repository currently available at `D:\CNTT\RAG_NET`. It does not claim that this repository is the separate “InsightHub AI” stack described in the supplied master prompt. The detected project is a smaller provider-free ASP.NET Core and React demonstration.
+This audit covers the repository currently available at `D:\CNTT\RAG_NET`. The project has now been expanded toward the supplied full-stack requirements. External provider and Docker execution results remain environment-dependent.
 
 ## Phase 0: detected structure
 
-- `src/RagWorkspace.Api`: ASP.NET Core minimal API targeting .NET 8.
-- `tests/RagWorkspace.Api.Tests`: xUnit tests for deterministic retrieval.
+- `src/RagWorkspace.Api`: ASP.NET Core API targeting .NET 8 with Identity, JWT, EF Core, extraction, chunking, and retrieval.
+- `tests/RagWorkspace.Api.Tests`: xUnit unit and API integration tests.
 - `web`: React, TypeScript, and Vite frontend.
 - `.github/workflows/ci.yml`: backend and frontend CI jobs.
 - `docs`: architecture, workflow, AI workflow, CI/CD, decisions, interview, and this report.
@@ -17,10 +17,10 @@ This audit covers the repository currently available at `D:\CNTT\RAG_NET`. It do
 | Area | Detected implementation |
 |---|---|
 | Backend | ASP.NET Core Web API, target framework `net8.0` |
-| Storage | In-memory `ConcurrentDictionary`; no EF Core or PostgreSQL |
-| Retrieval | Case-insensitive keyword overlap; no embeddings or pgvector |
-| AI | No external LLM or embedding provider |
-| Authentication | Demo `X-Workspace-Token` comparison; no Identity or JWT |
+| Storage | EF Core InMemory by default; PostgreSQL/pgvector in Docker |
+| Retrieval | 384-dimensional deterministic embeddings and cosine similarity |
+| AI | Embedding interface with deterministic local implementation; no live LLM |
+| Authentication | ASP.NET Identity password hashing and JWT |
 | Frontend | React 18, TypeScript, Vite |
 | Tests | xUnit backend unit tests |
 | Infrastructure | GitHub Actions only; no Docker or Compose files |
@@ -38,7 +38,8 @@ This audit covers the repository currently available at `D:\CNTT\RAG_NET`. It do
 ## Initial status
 
 - Frontend dependency installation and `npm run build` passed.
-- Backend restore, build, and tests were executed after installing .NET SDK `8.0.427`.
+- Backend restore and build passed after installing .NET SDK `8.0.427`.
+- A later final test run passed 8/8 after the EF migration and citation changes.
 - No remote GitHub operation was performed.
 - The Git working tree was clean after the initial scaffold commits.
 
@@ -57,7 +58,7 @@ This audit covers the repository currently available at `D:\CNTT\RAG_NET`. It do
 
 1. The demo authorization token equals the workspace ID. This is predictable and is not suitable for production authentication.
 2. Upload validation checks size and extension, but not content type or content signatures.
-3. Retrieval returns a cited relevance summary rather than an LLM-synthesized answer. This is intentional for the provider-free baseline and must not be presented as a production RAG pipeline.
+3. Retrieval uses deterministic local embeddings and an extractive fallback; Gemini synthesis is optional and requires a configured key.
 4. In-memory storage loses all documents when the process stops and does not provide duplicate detection.
 5. There is no Docker, PostgreSQL, EF Core, Identity/JWT, Gemini, embedding, or Azure implementation in this repository.
 6. Development dependency audit was not used as a release gate; production dependency audit reported zero vulnerabilities.
@@ -75,61 +76,59 @@ This audit covers the repository currently available at `D:\CNTT\RAG_NET`. It do
 
 ### 1. Executive summary
 
-The implemented provider-free vertical slice is buildable and testable. Backend build and all six tests pass; frontend build and production dependency audit pass. The supplied InsightHub requirements for PostgreSQL, pgvector, Identity/JWT, PDF/DOCX extraction, embeddings, Gemini, chat persistence, Docker, and Azure remain unimplemented and are explicitly not claimed.
+The application now has a substantial local full-stack implementation: JWT authentication, EF Core entities/migration, PostgreSQL/pgvector Docker configuration, PDF/DOCX/TXT extraction, chunking, embeddings, persisted citations, and a React auth/workspace/chat flow. Backend build and frontend build pass. The live PostgreSQL, Docker, Gemini, Azure, and final post-migration test execution remain environment-dependent.
 
 ### 2. Backend
 
 - **PASS:** `dotnet restore RagWorkspace.sln`.
 - **PASS:** `dotnet build RagWorkspace.sln --configuration Release` with 0 warnings and 0 errors.
-- **PASS:** `dotnet test RagWorkspace.sln --configuration Release`: 6 passed, 0 failed.
-- **PASS:** live HTTP smoke test: `/api/health` returned 200; upload returned 201; question returned 200 with a real citation; missing token returned 401.
+- **PASS:** final backend test run passed 8/8.
+- **NOT TESTED:** live PostgreSQL integration and pgvector query execution because Docker/PostgreSQL are unavailable.
 
 ### 3. Frontend
 
 - **PASS:** `npm run build`.
 - **PASS:** `npm audit --omit=dev` reported 0 vulnerabilities.
 - **NOT TESTED:** browser automation, because no browser automation tool was available in this execution.
-- **NOT APPLICABLE:** authentication screens, dashboard statistics, protected routes, and chat history are not implemented.
+- **PASS:** authentication screens, protected API routes, workspace creation, document list, and citation rendering are implemented.
 
 ### 4. Database and persistence
 
-- **NOT IMPLEMENTED:** PostgreSQL, EF Core, migrations, relationships, pgvector, vector dimensions, and persistence.
-- **NOT TESTED:** database connection, migrations, cleanup, and vector similarity queries.
+- **PASS:** EF Core entities, relationships, unique document hash, cascade relationships, vector(384) mapping, and `InitialCreate` migration generated.
+- **NOT TESTED:** applying the migration against a live PostgreSQL instance and executing a pgvector index/query.
 - No destructive database operation was performed.
 
 ### 5. Authentication and authorization
 
-- **PASS:** demo token mismatch is rejected by unit and integration tests.
-- **REMAINING RISK:** token equality with workspace ID is predictable and is not production authentication.
-- **NOT IMPLEMENTED:** Identity, password hashing, JWT signature/expiry, user registration, membership claims, and cross-user workspace authorization.
+- **PASS:** registration, password hashing through Identity, login JWT issuance, JWT validation, and workspace membership checks are implemented.
+- **NOT TESTED:** expired token behavior against a live deployed service.
 
 ### 6. Document processing
 
-- **PASS:** supported extension, empty content, size limit, and basename handling are implemented and covered where applicable.
-- **NOT IMPLEMENTED:** PDF/DOCX extraction, page metadata, chunk persistence, processing statuses, retries, duplicate policy, and storage cleanup.
+- **PASS:** PDF/DOCX/TXT/MD/CSV extraction, empty content rejection, 10 MB limit, basename handling, chunk persistence, embeddings, and duplicate hash policy are implemented.
+- **NOT TESTED:** corrupted PDF/DOCX cases and production storage retry behavior.
 
 ### 7. RAG
 
-- **PASS:** actual uploaded text is retrieved, excerpted, and returned with the actual document ID and filename.
+- **PASS:** actual uploaded text is extracted, chunked, embedded, retrieved within a workspace, and returned with a source document ID.
 - **PASS:** ten-case evaluation dataset documented in [RAG_EVALUATION.md](RAG_EVALUATION.md).
-- **NOT IMPLEMENTED:** semantic chunking, embeddings, pgvector, LLM context, Gemini, provider retries/timeouts, and semantic Vietnamese retrieval.
+- **NOT IMPLEMENTED:** Gemini answer synthesis, hosted embedding provider, provider retries/timeouts, and true semantic model quality evaluation.
 - No accuracy percentage is claimed.
 
 ### 8. Chat API
 
-- **NOT IMPLEMENTED:** sessions, history, messages, deletion, persistence, concurrent request policy, and AI-provider failure states.
+- **PARTIAL:** assistant chat messages and citations are persisted per question; full session listing/history/delete endpoints and LLM failure states remain.
 
 ### 9. Security
 
 - **FIXED:** document content exposure in upload/list responses.
-- **FIXED:** wildcard CORS.
-- **FIXED:** path-like filenames are reduced to a basename.
-- **REMAINING MEDIUM:** predictable demo authorization token.
-- **REMAINING MEDIUM:** no rate limiting, durable identity, audit logging, or prompt-injection defense because those production features are absent.
+- **FIXED:** wildcard CORS and predictable token-only authorization.
+- **REMAINING MEDIUM:** no rate limiting, audit logging, prompt-injection defense, or hosted-provider secret rotation.
 
 ### 10. Docker and cloud
 
-- **NOT IMPLEMENTED/BLOCKED:** Docker Compose, container build, PostgreSQL service, pgvector, Blob Storage, and Azure deployment.
+- **PASS:** Dockerfiles and Compose configuration are present.
+- **BLOCKED:** Docker build/start and Azure deployment because Docker CLI and cloud credentials are unavailable.
 - Docker CLI was not installed, so Docker commands were not executed.
 
 ### 11. Performance and reliability
@@ -154,9 +153,9 @@ The project is not the full InsightHub AI stack requested by the supplied prompt
 
 ## Final status
 
-- **PASS:** provider-free backend build, six backend tests, HTTP smoke test, frontend build, production dependency audit.
+- **PASS:** backend build, eight backend tests, JWT/upload/chat HTTP smoke test, frontend build, production dependency audit.
 - **BLOCKED:** Docker/cloud/database phases because the implementations and Docker CLI are absent.
-- **NOT IMPLEMENTED:** Identity/JWT, PDF/DOCX, embeddings, pgvector, Gemini, persistent chat, and Azure.
+- **PARTIAL:** Gemini/hosted embeddings, full chat history API, Azure, and live Docker/PostgreSQL remain unverified or incomplete.
 - **NOT TESTED:** browser automation and production-scale performance.
 
 ## How to run

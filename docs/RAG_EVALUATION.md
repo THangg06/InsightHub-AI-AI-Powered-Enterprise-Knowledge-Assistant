@@ -2,7 +2,7 @@
 
 ## Scope
 
-The current application is a deterministic keyword-retrieval demonstration. It does not contain PDF/DOCX extraction, chunking, embeddings, pgvector, or an LLM. The dataset below therefore evaluates the implemented retrieval and citation behavior only; it must not be presented as an evaluation of semantic RAG or Gemini.
+The current local implementation extracts PDF/DOCX/TXT content, chunks it, creates deterministic 384-dimensional embeddings, and retrieves chunks by cosine similarity. Gemini answer generation is optional and requires a configured API key. The dataset below evaluates local retrieval and citation behavior; it is not a claim of live Gemini quality.
 
 ## Evaluation dataset
 
@@ -38,4 +38,3 @@ The integration test verifies that uploaded content is used for a cited answer a
 ## Future semantic-RAG evaluation
 
 After adding a real extractor, chunker, embedding provider, and vector database, this dataset should be extended with source page/chunk identifiers and measured for retrieval recall, citation precision, answer correctness, abstention correctness, latency, and provider error recovery. Results should be recorded from a repeatable test run rather than estimated manually.
-

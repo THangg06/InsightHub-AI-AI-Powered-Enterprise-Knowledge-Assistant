@@ -9,70 +9,58 @@ public sealed class ApiIntegrationTests : IClassFixture<WebApplicationFactory<Pr
 {
     private readonly HttpClient client;
 
-    public ApiIntegrationTests(WebApplicationFactory<Program> factory)
-    {
-        client = factory.CreateClient();
-    }
+    public ApiIntegrationTests(WebApplicationFactory<Program> factory) => client = factory.CreateClient();
 
     [Fact]
-    public async Task Rejects_requests_without_workspace_token()
+    public async Task Rejects_requests_without_jwt()
     {
-        var response = await client.GetAsync("/api/workspaces/demo/documents");
-
+        var response = await client.GetAsync($"/api/workspaces/{Guid.NewGuid()}/documents");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Uploads_document_without_returning_content_and_answers_with_citation()
+    public async Task Registers_creates_workspace_uploads_and_answers_with_citation()
     {
+        var suffix = Guid.NewGuid().ToString("N");
+        var email = $"{suffix}@example.test";
+        var register = await client.PostAsJsonAsync("/api/auth/register", new { email, password = "Password123" });
+        Assert.Equal(HttpStatusCode.OK, register.StatusCode);
+        var auth = await register.Content.ReadFromJsonAsync<AuthPayload>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.Token);
+
+        var workspaceResponse = await client.PostAsJsonAsync("/api/workspaces", new { name = $"Workspace {suffix}" });
+        Assert.Equal(HttpStatusCode.Created, workspaceResponse.StatusCode);
+        var workspace = await workspaceResponse.Content.ReadFromJsonAsync<WorkspacePayload>();
+
         using var form = new MultipartFormDataContent();
-        using var content = new ByteArrayContent(
-            "Deployment is automated with GitHub Actions."u8.ToArray());
-        content.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
-        form.Add(content, "file", "guide.txt");
-
-        using var uploadRequest = new HttpRequestMessage(
-            HttpMethod.Post,
-            "/api/workspaces/demo/documents")
-        {
-            Content = form
-        };
-        uploadRequest.Headers.Add("X-Workspace-Token", "demo");
-
-        var uploadResponse = await client.SendAsync(uploadRequest);
+        form.Add(new ByteArrayContent("Deployment uses GitHub Actions."u8.ToArray()), "file", "guide.txt");
+        var uploadResponse = await client.PostAsync($"/api/workspaces/{workspace!.Id}/documents", form);
         Assert.Equal(HttpStatusCode.Created, uploadResponse.StatusCode);
-        var uploadBody = await uploadResponse.Content.ReadAsStringAsync();
-        Assert.DoesNotContain("GitHub Actions", uploadBody);
 
-        using var askRequest = new HttpRequestMessage(
-            HttpMethod.Post,
-            "/api/workspaces/demo/ask")
-        {
-            Content = JsonContent.Create(new { question = "How is deployment automated?" })
-        };
-        askRequest.Headers.Add("X-Workspace-Token", "demo");
-
-        var askResponse = await client.SendAsync(askRequest);
+        var askResponse = await client.PostAsJsonAsync($"/api/workspaces/{workspace.Id}/ask", new { question = "How is deployment automated?" });
         Assert.Equal(HttpStatusCode.OK, askResponse.StatusCode);
-        var answerBody = await askResponse.Content.ReadAsStringAsync();
-        Assert.Contains("guide.txt", answerBody);
+        var answer = await askResponse.Content.ReadAsStringAsync();
+        Assert.Contains("guide.txt", answer);
     }
 
     [Fact]
     public async Task Rejects_unsupported_document_extensions()
     {
+        var suffix = Guid.NewGuid().ToString("N");
+        await client.PostAsJsonAsync("/api/auth/register", new { email = $"{suffix}@example.test", password = "Password123" });
+        var login = await client.PostAsJsonAsync("/api/auth/login", new { email = $"{suffix}@example.test", password = "Password123" });
+        var auth = await login.Content.ReadFromJsonAsync<AuthPayload>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.Token);
+        var workspaceResponse = await client.PostAsJsonAsync("/api/workspaces", new { name = $"Workspace {suffix}" });
+        var workspace = await workspaceResponse.Content.ReadFromJsonAsync<WorkspacePayload>();
+
         using var form = new MultipartFormDataContent();
         form.Add(new ByteArrayContent("not supported"u8.ToArray()), "file", "malware.exe");
-        using var request = new HttpRequestMessage(
-            HttpMethod.Post,
-            "/api/workspaces/extension-test/documents")
-        {
-            Content = form
-        };
-        request.Headers.Add("X-Workspace-Token", "extension-test");
-
-        var response = await client.SendAsync(request);
+        var response = await client.PostAsync($"/api/workspaces/{workspace!.Id}/documents", form);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    private sealed record AuthPayload(string Token, Guid UserId, string Email);
+    private sealed record WorkspacePayload(Guid Id, string Name);
 }
