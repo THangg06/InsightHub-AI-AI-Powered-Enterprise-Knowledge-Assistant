@@ -12,6 +12,7 @@ The local application includes:
 - Chunking and deterministic 384-dimensional embeddings for local reproducibility.
 - Workspace-scoped retrieval and persisted citation records.
 - React + TypeScript frontend with register, login, workspace, upload, and chat flows.
+- Chat history listing/deletion and document filename search/deletion.
 
 The deterministic embedding provider is intentionally replaceable. A hosted Gemini/embedding provider still requires credentials and is not claimed as live-verified.
 

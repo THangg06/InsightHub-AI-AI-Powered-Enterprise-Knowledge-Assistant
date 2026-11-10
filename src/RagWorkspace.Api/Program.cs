@@ -110,10 +110,13 @@ app.MapPost("/api/workspaces", async (CreateWorkspaceRequest request, ClaimsPrin
     return Results.Created($"/api/workspaces/{workspace.Id}", new { workspace.Id, workspace.Name });
 }).RequireAuthorization();
 
-app.MapGet("/api/workspaces/{workspaceId:guid}/documents", async (Guid workspaceId, ClaimsPrincipal principal, ApplicationDbContext db) =>
+app.MapGet("/api/workspaces/{workspaceId:guid}/documents", async (Guid workspaceId, string? search, ClaimsPrincipal principal, ApplicationDbContext db) =>
 {
     if (!await IsMemberAsync(workspaceId, principal, db)) return Results.Unauthorized();
-    var documents = await db.Documents.Where(document => document.WorkspaceId == workspaceId)
+    var query = db.Documents.Where(document => document.WorkspaceId == workspaceId);
+    if (!string.IsNullOrWhiteSpace(search))
+        query = query.Where(document => document.FileName.Contains(search));
+    var documents = await query
         .Select(document => new DocumentResponse(document.Id, document.FileName, document.ContentType, document.ProcessingStatus, document.UploadedAt))
         .ToListAsync();
     return Results.Ok(documents);

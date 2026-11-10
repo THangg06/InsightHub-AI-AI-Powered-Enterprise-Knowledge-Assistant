@@ -28,6 +28,7 @@ function App() {
   const [workspaceName, setWorkspaceName] = useState("My workspace");
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [documentSearch, setDocumentSearch] = useState("");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
@@ -54,8 +55,18 @@ function App() {
     } catch (error) { setStatus(error instanceof Error ? error.message : "Workspace creation failed."); }
   }
 
-  async function loadDocuments(id: string) {
-    setDocuments(await request<Document[]>(`/api/workspaces/${id}/documents`));
+  async function loadDocuments(id: string, search = documentSearch) {
+    const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+    setDocuments(await request<Document[]>(`/api/workspaces/${id}/documents${query}`));
+  }
+
+  async function deleteDocument(id: string) {
+    if (!window.confirm("Delete this document and its chunks?")) return;
+    try {
+      await request(`/api/documents/${id}`, { method: "DELETE" });
+      if (workspace) await loadDocuments(workspace.id);
+      setStatus("Document deleted.");
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Document deletion failed."); }
   }
 
   async function loadChats(id: string) {
@@ -90,7 +101,7 @@ function App() {
 
   if (!user) return <main><p className="eyebrow">RAG WORKSPACE</p><h1>Secure document answers.</h1><p className="intro">Register or sign in to create an isolated workspace.</p><section className="card"><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><button onClick={() => authenticate("/api/auth/register")}>Register</button><button className="secondary" onClick={() => authenticate("/api/auth/login")}>Sign in</button>{status && <p className="status">{status}</p>}</section></main>;
 
-  return <main><p className="eyebrow">RAG WORKSPACE</p><h1>Ask your documents.</h1><p className="intro">Signed in as {user.email}</p><section className="card"><h2>Workspace</h2>{workspace ? <><strong>{workspace.name}</strong><button className="secondary" onClick={() => { void loadDocuments(workspace.id); void loadChats(workspace.id); }}>Refresh workspace</button></> : <><input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} /><button onClick={createWorkspace}>Create workspace</button></>}</section>{workspace && <><section className="card"><h2>Chat history</h2>{chats.length === 0 ? <p>No conversations yet.</p> : <ul>{chats.map((chat) => <li key={chat.id}><span>{chat.title}</span><button className="secondary" onClick={() => deleteChat(chat.id)}>Delete</button></li>)}</ul>}</section><section className="card"><h2>Upload document</h2><input type="file" accept=".pdf,.docx,.txt,.md,.csv" onChange={(event) => event.target.files?.[0] && upload(event.target.files[0])} /><ul>{documents.map((document) => <li key={document.id}>{document.fileName} — {document.processingStatus}</li>)}</ul></section><section className="card"><h2>Ask</h2><textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="What does the document explain?" /><button disabled={!question.trim()} onClick={ask}>Get cited answer</button></section>{answer && <section className="answer"><h2>Answer</h2><p>{answer.answer}</p><h3>Sources</h3><ul>{answer.citations.map((citation) => <li key={citation.documentId}><strong>{citation.fileName}</strong>: {citation.excerpt}</li>)}</ul></section>}</>}{status && <p className="status">{status}</p>}</main>;
+  return <main><p className="eyebrow">RAG WORKSPACE</p><h1>Ask your documents.</h1><p className="intro">Signed in as {user.email}</p><section className="card"><h2>Workspace</h2>{workspace ? <><strong>{workspace.name}</strong><button className="secondary" onClick={() => { void loadDocuments(workspace.id); void loadChats(workspace.id); }}>Refresh workspace</button></> : <><input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} /><button onClick={createWorkspace}>Create workspace</button></>}</section>{workspace && <><section className="card"><h2>Chat history</h2>{chats.length === 0 ? <p>No conversations yet.</p> : <ul>{chats.map((chat) => <li key={chat.id}><span>{chat.title}</span><button className="secondary" onClick={() => deleteChat(chat.id)}>Delete</button></li>)}</ul>}</section><section className="card"><h2>Document management</h2><input value={documentSearch} onChange={(event) => setDocumentSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && void loadDocuments(workspace.id)} placeholder="Search by filename" /><input type="file" accept=".pdf,.docx,.txt,.md,.csv" onChange={(event) => event.target.files?.[0] && upload(event.target.files[0])} /><ul>{documents.map((document) => <li key={document.id}><span>{document.fileName} — {document.processingStatus}</span><button className="secondary" onClick={() => deleteDocument(document.id)}>Delete</button></li>)}</ul></section><section className="card"><h2>Ask</h2><textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="What does the document explain?" /><button disabled={!question.trim()} onClick={ask}>Get cited answer</button></section>{answer && <section className="answer"><h2>Answer</h2><p>{answer.answer}</p><h3>Sources</h3><ul>{answer.citations.map((citation) => <li key={citation.documentId}><strong>{citation.fileName}</strong>: {citation.excerpt}</li>)}</ul></section>}</>}{status && <p className="status">{status}</p>}</main>;
 }
 
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
