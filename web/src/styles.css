@@ -1,0 +1,10 @@
+:root { font-family: Inter, system-ui, sans-serif; color: #172033; background: #f5f7fb; }
+body { margin: 0; } main { max-width: 760px; margin: 0 auto; padding: 64px 24px; }
+.eyebrow { color: #3b63d8; font-weight: 700; letter-spacing: .14em; }
+h1 { font-size: 3rem; margin: 8px 0; } .intro { color: #5e687b; margin-bottom: 32px; }
+label { display: block; font-weight: 600; margin-bottom: 20px; } input, textarea { box-sizing: border-box; border: 1px solid #ccd3e0; border-radius: 8px; padding: 10px; }
+label input { margin-left: 8px; } .card, .answer { background: white; border-radius: 14px; padding: 24px; margin: 16px 0; box-shadow: 0 8px 30px #1720330d; }
+textarea { display: block; width: 100%; min-height: 100px; margin: 12px 0; resize: vertical; }
+button { background: #315bd6; color: white; border: 0; border-radius: 8px; padding: 12px 18px; font-weight: 700; cursor: pointer; } button:disabled { opacity: .5; cursor: not-allowed; }
+.status { color: #315bd6; } li { margin: 10px 0; line-height: 1.5; }
+
