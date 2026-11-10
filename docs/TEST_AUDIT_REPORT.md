@@ -83,6 +83,7 @@ The application now has a substantial local full-stack implementation: JWT authe
 - **PASS:** `dotnet restore RagWorkspace.sln`.
 - **PASS:** `dotnet build RagWorkspace.sln --configuration Release` with 0 warnings and 0 errors.
 - **PASS:** final backend test run passed 8/8.
+- **PASS:** follow-up feature branch verification passed 10/10 after adding chat history and document management tests.
 - **NOT TESTED:** live PostgreSQL integration and pgvector query execution because Docker/PostgreSQL are unavailable.
 
 ### 3. Frontend
@@ -91,6 +92,7 @@ The application now has a substantial local full-stack implementation: JWT authe
 - **PASS:** `npm audit --omit=dev` reported 0 vulnerabilities.
 - **NOT TESTED:** browser automation, because no browser automation tool was available in this execution.
 - **PASS:** authentication screens, protected API routes, workspace creation, document list, and citation rendering are implemented.
+- **PASS:** chat history and document search/delete UI flows are implemented.
 
 ### 4. Database and persistence
 
